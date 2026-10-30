@@ -548,8 +548,30 @@ if (restoreState()) {
   document.body.classList.add('has-result');
   renderResult(true);
 }
-// 開いたときのアニメーションが終わったら、ふだんの動きに戻す
-setTimeout(() => document.documentElement.classList.remove('intro'), 1600);
+// 開いたときのアニメーション。終わったら、ふだんの動きに戻す
+let introTimer = 0;
+function endIntroLater() {
+  clearTimeout(introTimer);
+  introTimer = setTimeout(() => document.documentElement.classList.remove('intro'), 1600);
+}
+function playIntro() {
+  if (busy || document.querySelector('dialog[open]')) return;
+  const root = document.documentElement;
+  root.classList.remove('intro');
+  void root.offsetWidth; // いったん外してから付け直すと、最初から再生される
+  root.classList.add('intro');
+  if (state.data) renderResult(true);
+  window.scrollTo(0, 0);
+  endIntroLater();
+}
+endIntroLater();
+// ホーム画面のアプリは、閉じても読み込み直さずに再開することが多いので、戻ってきたときにも流す
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (hiddenAt && Date.now() - hiddenAt > 3000) playIntro();
+});
+window.addEventListener('pageshow', (e) => { if (e.persisted) playIntro(); });
 setInterval(() => { renderTop(); renderCountdown(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderTop(); renderCountdown(); } });
 
