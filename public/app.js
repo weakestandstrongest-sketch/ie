@@ -72,6 +72,22 @@ function save(key, value) {
 }
 let home = load(HOME_KEY) || '';
 
+// 検索条件（のりかえの設定と同じ項目）
+const OPTS_KEY = 'ie:opts';
+const SELECT_OPTS = { s: 'optS', expkind: 'optExpkind', ws: 'optWs', ticket: 'optTicket' };
+const TOGGLE_OPTS = ['shin', 'ex', 'al', 'hb', 'lb', 'sr'];
+const DEFAULT_OPTS = { s: '0', expkind: '1', ws: '3', ticket: 'ic', shin: true, ex: true, al: true, hb: true, lb: true, sr: true };
+let opts = (() => {
+  try { return { ...DEFAULT_OPTS, ...JSON.parse(load(OPTS_KEY) || '{}') }; } catch (e) { return { ...DEFAULT_OPTS }; }
+})();
+// API に渡す形（使う乗り物は 1 / 0）
+function optParams() {
+  const out = {};
+  Object.keys(SELECT_OPTS).forEach((k) => { out[k] = opts[k]; });
+  TOGGLE_OPTS.forEach((k) => { out[k] = opts[k] ? '1' : '0'; });
+  return out;
+}
+
 // ---------- 見出し ----------
 function renderTop() {
   const now = new Date();
@@ -132,6 +148,7 @@ async function goHome() {
       home,
       date: `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`,
       time: hm(now),
+      ...optParams(),
     });
     let data;
     try {
@@ -439,19 +456,33 @@ function openSheet() {
   const dlg = $('homeSheet');
   $('homeInput').value = home;
   $('suggest').textContent = '';
-  $('sheetNote').textContent = home ? `いまの設定：${home}` : '';
+  $('sheetNote').textContent = home ? '' : 'はじめに家の場所を入れてください';
+  Object.entries(SELECT_OPTS).forEach(([k, id]) => { $(id).value = opts[k]; });
+  TOGGLE_OPTS.forEach((k) => { $(`opt_${k}`).checked = !!opts[k]; });
   dlg.showModal();
-  setTimeout(() => $('homeInput').focus(), 250);
+  dlg.scrollTop = 0;
+  // 家が決まっていないときだけ、すぐ入力できるようにする（キーボードで設定が隠れないように）
+  if (!home) setTimeout(() => $('homeInput').focus(), 250);
+}
+
+function setHome(v) {
+  home = v;
+  save(HOME_KEY, v);
+  renderHomeLabel();
+  hideMessage();
 }
 
 function saveHome(v) {
   v = (v || '').trim();
   if (!v) { $('sheetNote').textContent = '駅名・バス停か住所を入れてください'; return; }
-  home = v;
-  save(HOME_KEY, v);
-  renderHomeLabel();
+  setHome(v);
   $('homeSheet').close();
-  hideMessage();
+}
+
+function saveOpts() {
+  Object.entries(SELECT_OPTS).forEach(([k, id]) => { opts[k] = $(id).value; });
+  TOGGLE_OPTS.forEach((k) => { opts[k] = $(`opt_${k}`).checked; });
+  save(OPTS_KEY, JSON.stringify(opts));
 }
 
 async function loadSuggest(q) {
@@ -503,6 +534,13 @@ $('homeInput').addEventListener('input', (e) => {
   suggestTimer = setTimeout(() => loadSuggest(q), 220);
 });
 $('homeSheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+$('sheetDone').addEventListener('click', () => $('homeSheet').close());
+// 閉じるときに、入力した家の場所も保存する
+$('homeSheet').addEventListener('close', () => {
+  const v = $('homeInput').value.trim();
+  if (v && v !== home) setHome(v);
+});
+$('homeSheet').addEventListener('change', (e) => { if (e.target.id !== 'homeInput') saveOpts(); });
 
 renderTop();
 renderHomeLabel();

@@ -13,6 +13,8 @@ function json(body, status = 200, extra = {}) {
   });
 }
 
+const SEARCH_OPTIONS = ['s', 'expkind', 'ws', 'ticket', 'shin', 'ex', 'al', 'hb', 'lb', 'sr'];
+
 // Yahoo!乗換案内で 1 回検索する。経路がなければ routes は空
 async function searchOnce(params, env) {
   const url = buildSearchUrl(params, env.UPSTREAM || YAHOO_ORIGIN);
@@ -41,6 +43,8 @@ async function handleHome(request, env) {
   let lastError = '経路が見つかりませんでした';
   for (const start of starts) {
     const q = new URLSearchParams({ from: start.from, to: home, date: p.get('date') || '', time: p.get('time') || '', type: 'dep' });
+    // 検索条件（表示順・歩く速さ・使う乗り物など）はそのまま渡す。値は buildSearchUrl が確かめる
+    for (const k of SEARCH_OPTIONS) if (p.has(k)) q.set(k, p.get(k));
     try {
       const { routes, yahooUrl } = await searchOnce(q, env);
       if (routes.length) {

@@ -16,7 +16,7 @@ const fmtMin = (ms) => TimeShift.formatMinutes(ms / MIN_MS);
 
 async function fetchRoutes({ from, to, at: when }) {
   try {
-    const res = await fetch('api/search?' + new URLSearchParams({ from, to, type: 'dep', date: dateOf(when), time: hmOf(when) }));
+    const res = await fetch('api/search?' + new URLSearchParams({ from, to, type: 'dep', date: dateOf(when), time: hmOf(when), ...optParams() }));
     return await res.json();
   } catch (e) {
     return { routes: [] };

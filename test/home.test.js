@@ -81,3 +81,22 @@ test('/api/search は前後の便さがし用にふつうの検索結果を返�
   const bad = await worker.fetch(new Request('https://ie.example.workers.dev/api/search?from=岐阜&date=2026-10-30&time=07:12'), {}, { waitUntil() {} });
   assert.equal(bad.status, 400);
 });
+
+test('検索条件は Yahoo の検索にそのまま渡す', async () => {
+  let yahooUrl = '';
+  mock();
+  const base = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/search/result')) yahooUrl = url;
+    return base(input);
+  };
+  await call(`${QS}&s=1&ws=1&ticket=normal&shin=0&lb=1&expkind=2`);
+  const q = new URL(yahooUrl).searchParams;
+  assert.equal(q.get('s'), '1');
+  assert.equal(q.get('ws'), '1');
+  assert.equal(q.get('ticket'), 'normal');
+  assert.equal(q.get('shin'), '0');
+  assert.equal(q.get('lb'), '1');
+  assert.equal(q.get('expkind'), '2');
+});
