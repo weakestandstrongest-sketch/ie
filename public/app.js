@@ -19,6 +19,8 @@ const COLOR = { start: 'var(--ink)', walk: 'var(--walk)', home: 'var(--accent)',
 // data: 検索結果 / index: 表示中のルート / searchedAt: 検索した時刻（ミリ秒）
 let state = { data: null, index: 0, searchedAt: 0 };
 let busy = false;
+// 途中の駅を開いている乗り物（経路の何番目の駅から乗るか）
+const expanded = new Set();
 
 // ---------- 小さな道具 ----------
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -140,6 +142,7 @@ async function goHome() {
     }
     if (!data.routes || !data.routes.length) throw new Error(`経路が見つかりませんでした|${data.error || ''}`);
     state = { data, index: 0, searchedAt: now.getTime() };
+    expanded.clear();
     saveState();
     document.body.classList.add('has-result');
     renderResult(true);
@@ -207,9 +210,16 @@ function buildItems(route, start, homeName) {
     if (minutes != null) meta.push(`${minutes}分`);
     const plat = departPlatform(s.platform);
     if (plat) meta.push(plat);
-    if (s.stops) meta.push(s.stops);
     push({
       type: 'ride',
+      stepIndex: i - 1,
+      stops: s.stops,
+      // 乗る駅・途中で止まる駅・降りる駅
+      stopList: [
+        { name: placeName(prev.name), time: prev.dep, edge: true },
+        ...(s.stopList || []).map((x) => ({ name: placeName(x.name), time: x.time })),
+        { name: placeName(next.name), time: next.arr, edge: true },
+      ],
       bus: /バス/.test(s.line),
       time: prev.dep,
       end: next.arr,
@@ -250,7 +260,13 @@ function renderItem(it, next) {
   if (it.end && it.type === 'ride') t.append(el('span', 'end', it.end));
 
   const rail = el('div', 'rail');
-  const pill = el('div', 'pill');
+  const pill = el(it.type === 'ride' ? 'button' : 'div', 'pill');
+  if (it.type === 'ride') {
+    // 乗り物のアイコンを押すと前後の便
+    pill.type = 'button';
+    pill.setAttribute('aria-label', `${it.title} の前後の便`);
+    pill.addEventListener('click', () => openDia(it.stepIndex));
+  }
   pill.innerHTML = ICONS[it.type === 'ride' ? (it.bus ? 'bus' : 'train') : it.type === 'start' ? 'pin' : it.type];
   pill.style.height = `${pillHeight}px`;
   rail.append(pill);
@@ -266,11 +282,46 @@ function renderItem(it, next) {
   if (it.small) title.append(el('small', null, it.small));
   body.append(title);
   if (it.sub) body.append(el('p', 'sub', it.sub));
-  if ((it.meta && it.meta.length) || it.alert) {
+  if ((it.meta && it.meta.length) || it.alert || it.type === 'ride') {
     const ul = el('ul', 'meta');
     (it.meta || []).forEach((m) => ul.append(el('li', null, m)));
     if (it.alert) ul.append(el('li', 'warn', `⚠︎ ${it.alert}`));
+    if (it.type === 'ride') {
+      const hasStops = it.stopList.length > 2;
+      if (it.stops || hasStops) {
+        const chip = el('li', 'chip-btn stops-toggle', `${it.stops || `${it.stopList.length - 1}駅`}`);
+        chip.append(el('span', 'chev', '⌄'));
+        ul.append(chip);
+      }
+      const diaChip = el('li', 'chip-btn', '前後の便');
+      diaChip.addEventListener('click', (e) => { e.stopPropagation(); openDia(it.stepIndex); });
+      ul.append(diaChip);
+    }
     body.append(ul);
+  }
+  if (it.type === 'ride') {
+    // 本文を押すと、途中で止まる駅を開いたり閉じたりする
+    const stops = el('ol', 'stops');
+    it.stopList.forEach((x) => {
+      const row = el('li', x.edge ? 'edge' : null);
+      row.append(el('span', 'stop-time', x.time || ''), el('span', 'stop-name', x.name));
+      stops.append(row);
+    });
+    body.append(stops);
+    body.classList.add('tappable');
+    const open = expanded.has(it.stepIndex);
+    li.classList.toggle('open', open);
+    body.setAttribute('role', 'button');
+    body.setAttribute('aria-expanded', String(open));
+    body.tabIndex = 0;
+    const toggle = () => {
+      const now = !li.classList.contains('open');
+      li.classList.toggle('open', now);
+      body.setAttribute('aria-expanded', String(now));
+      if (now) expanded.add(it.stepIndex); else expanded.delete(it.stepIndex);
+    };
+    body.addEventListener('click', toggle);
+    body.addEventListener('keydown', (e) => { if (e.key === 'Enter') toggle(); });
   }
   li.append(t, rail, body);
   return li;
@@ -364,6 +415,7 @@ function renderResult(animate) {
     li.append(stripe, time, meta);
     const pick = () => {
       state.index = i;
+      expanded.clear();
       saveState();
       renderResult(true);
       window.scrollTo(0, 0);

@@ -1,10 +1,12 @@
 // オフラインでも画面を開けるよう、アプリ本体だけをキャッシュする
-const CACHE = 'ie-v3';
+const CACHE = 'ie-v4';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './timeshift.js',
+  './dia.js',
   './manifest.webmanifest',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',

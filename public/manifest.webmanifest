@@ -1,6 +1,6 @@
 {
-  "name": "帰る",
-  "short_name": "帰る",
+  "name": "home",
+  "short_name": "home",
   "description": "現在地から家までの経路だけを出す",
   "start_url": "./",
   "scope": "./",

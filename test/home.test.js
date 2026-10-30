@@ -72,3 +72,12 @@ test('家が未設定・位置がおかしいときは 400', async () => {
   assert.equal((await call('lat=35.4&lng=136.7&date=2026-10-30&time=18:00')).status, 400);
   assert.equal((await call('lat=0&lng=0&home=渋谷&date=2026-10-30&time=18:00')).status, 400);
 });
+
+test('/api/search は前後の便さがし用にふつうの検索結果を返す', async () => {
+  mock();
+  const res = await worker.fetch(new Request('https://ie.example.workers.dev/api/search?from=岐阜&to=渋谷&date=2026-10-30&time=07:12&type=dep'), {}, { waitUntil() {} });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).routes.length, 3);
+  const bad = await worker.fetch(new Request('https://ie.example.workers.dev/api/search?from=岐阜&date=2026-10-30&time=07:12'), {}, { waitUntil() {} });
+  assert.equal(bad.status, 400);
+});
