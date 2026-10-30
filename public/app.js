@@ -1,5 +1,8 @@
 'use strict';
 
+// 公開するたびに sw.js の CACHE と index.html の ?v= と一緒に上げる
+const APP_VERSION = '8';
+
 const $ = (id) => document.getElementById(id);
 const HOME_KEY = 'ie:home';
 const LAST_KEY = 'ie:last';
@@ -609,4 +612,18 @@ window.addEventListener('pageshow', (e) => { if (e.persisted) playIntro(); });
 setInterval(() => { renderTop(); renderCountdown(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderTop(); renderCountdown(); } });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+$('version').textContent = `home v${APP_VERSION}`;
+
+// 新しい版が公開されたら、アプリに戻ってきたときに取り込んで読み込み直す
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+  }).catch(() => {});
+}

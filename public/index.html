@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=8">
   <script>document.documentElement.classList.add('intro');</script>
 </head>
 <body>
@@ -111,6 +111,7 @@
         <label class="toggle"><input type="checkbox" id="opt_sr"><span>フェリー</span></label>
       </div>
       <p class="sheet-hint">検索条件は、次に「帰る」を押したときから使われます</p>
+      <p class="sheet-version" id="version"></p>
     </form>
   </dialog>
 
@@ -126,8 +127,8 @@
     <div class="dia-list" id="diaList"></div>
   </dialog>
 
-  <script src="timeshift.js"></script>
-  <script src="app.js"></script>
-  <script src="dia.js"></script>
+  <script src="timeshift.js?v=8"></script>
+  <script src="app.js?v=8"></script>
+  <script src="dia.js?v=8"></script>
 </body>
 </html>

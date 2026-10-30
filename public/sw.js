@@ -1,5 +1,5 @@
 // オフラインでも画面を開けるよう、アプリ本体だけをキャッシュする
-const CACHE = 'ie-v7';
+const CACHE = 'ie-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -30,8 +30,10 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
+  // 毎回サーバーに新しい版があるか確かめる（ない時は 304 で速い）。古いファイルを使い続けないように
+  const req = e.request.mode === 'navigate' ? fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(e.request, { cache: 'no-cache' });
   e.respondWith(
-    fetch(e.request)
+    req
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
