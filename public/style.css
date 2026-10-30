@@ -808,6 +808,54 @@ button.pill::after {
 .dia-options-title { margin: 0 4px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
 .dia-empty { margin: 24px 0; text-align: center; font-size: 14px; color: var(--ink-3); }
 
+/* ---------- 開いたときのアニメーション（move と同じ流れ） ---------- */
+.splash { display: none; }
+.splash-on .splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(160deg, #faf6f2, #f6efe9 60%, #f1e4dc);
+  animation: sp-out .45s var(--ease) 1.75s forwards;
+}
+@media (prefers-color-scheme: dark) { .splash-on .splash { background: radial-gradient(70% 50% at 50% 45%, #231816, var(--bg)); } }
+.splash.done { animation: sp-out .3s var(--ease) forwards !important; }
+.splash svg { width: min(64vw, 260px); height: auto; overflow: visible; }
+.splash circle, .splash path { transform-box: view-box; transform-origin: 256px 256px; }
+/* 1. まんなかの丸がぽんと出る */
+.sp-disc { transform: scale(0); animation: sp-pop .55s var(--spring) .1s forwards; }
+/* 2. 家を一筆で描いて、扉が入る */
+.sp-house { fill: none; stroke: #fff; stroke-width: 16; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; animation: sp-draw .6s ease-in-out .45s forwards; }
+.sp-door { fill: none; stroke: #fff; stroke-width: 14; stroke-linejoin: round; stroke-linecap: round; transform-origin: 256px 318px; transform: scale(0); animation: sp-pop .4s var(--spring) .98s forwards; }
+/* 3. 「ただいま」の合図に、波が2回広がり、アイコンと同じ輪が残る */
+.sp-wave { fill: none; stroke: var(--accent); stroke-width: 6; opacity: 0; animation: sp-wave 1s cubic-bezier(.2, .6, .3, 1) 1.05s forwards; }
+.sp-wave.w2 { animation-delay: 1.25s; }
+.sp-ring { fill: none; stroke: var(--accent); stroke-width: 10; opacity: 0; transform: scale(.75); animation: sp-ring .6s var(--ease) forwards; }
+.sp-ring.r1 { --o: .32; animation-delay: 1.1s; }
+.sp-ring.r2 { --o: .18; animation-delay: 1.25s; }
+.sp-name { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .14em; text-indent: .14em; color: var(--accent); opacity: 0; transform: translateY(8px); animation: sp-name .5s var(--ease) 1.15s forwards; }
+@keyframes sp-pop { to { transform: scale(1); } }
+@keyframes sp-draw { from { opacity: 1; } to { stroke-dashoffset: 0; opacity: 1; } }
+@keyframes sp-wave { 0% { opacity: .55; transform: scale(1); } 100% { opacity: 0; transform: scale(1.9); } }
+@keyframes sp-ring { to { opacity: var(--o); transform: scale(1); } }
+@keyframes sp-name { to { opacity: 1; transform: none; } }
+@keyframes sp-out { to { opacity: 0; transform: scale(1.06); visibility: hidden; } }
+/* アニメーションの間は、うしろの画面を出さずに待つ（終わってから順に出す） */
+.splash-on:not(.splash-reveal) body > :not(.splash) { visibility: hidden; }
+
+.toggles.one { grid-template-columns: 1fr; }
+.toggle span small { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.toggle span:has(small) { padding-top: 8px; padding-bottom: 8px; }
+
+/* 開いたときに「完了」などに出る四角い枠は出さない（キーボードで動かすときだけ出す） */
+.sheet h2:focus { outline: none; }
+.sheet button:focus:not(:focus-visible), .settings:focus:not(:focus-visible) { outline: none; }
+.sheet-done:focus { outline: none; }
+
 /* ---------- 開いたときのアニメーション ---------- */
 .intro .glow { animation: fade 1.1s ease both; }
 .intro .date { animation: rise .7s var(--ease) .05s both; }
@@ -857,4 +905,9 @@ button.pill::after {
   @keyframes breathe { 50% { opacity: .85; } }
   @keyframes breathe-pill { 0%, 100% { transform: translateX(-50%); } 50% { transform: translateX(-50%); opacity: .85; } }
   .go-ring, .intro body:not(.has-result) .go::after { display: none; }
+  .splash svg *, .sp-name { animation: none !important; transform: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; }
+  .sp-wave { opacity: 0 !important; }
+  .sp-ring.r1 { opacity: .32 !important; }
+  .sp-ring.r2 { opacity: .18 !important; }
+  @keyframes sp-out { to { opacity: 0; visibility: hidden; } }
 }

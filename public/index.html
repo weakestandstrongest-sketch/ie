@@ -15,10 +15,28 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=8">
-  <script>document.documentElement.classList.add('intro');</script>
+  <link rel="stylesheet" href="style.css?v=9">
+  <script>
+    // 開いたときのアニメーション（設定でオフにできる。Google のログインから戻ったときも出す）
+    document.documentElement.classList.add('intro');
+    try { if (localStorage.getItem('ie:splash') !== 'off') document.documentElement.classList.add('splash-on'); } catch (e) {}
+  </script>
 </head>
 <body>
+  <!-- 開いたとき：丸が出て、家を一筆で描いて、扉が入り、輪が広がってからアプリへ（アイコンと同じ形・move と同じ流れ） -->
+  <div class="splash" id="splash" aria-hidden="true">
+    <svg viewBox="0 0 512 512">
+      <defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffa07a"/><stop offset=".6" stop-color="#f26b5b"/><stop offset="1" stop-color="#d9493f"/></linearGradient></defs>
+      <circle class="sp-wave w1" cx="256" cy="256" r="122"/>
+      <circle class="sp-wave w2" cx="256" cy="256" r="122"/>
+      <circle class="sp-ring r2" cx="256" cy="256" r="196"/>
+      <circle class="sp-ring r1" cx="256" cy="256" r="160"/>
+      <circle class="sp-disc" cx="256" cy="256" r="122" fill="url(#spg)"/>
+      <path class="sp-house" pathLength="100" d="M256 318 H208 Q198 318 198 308 V250 L256 200 L314 250 V308 Q314 318 304 318 Z"/>
+      <path class="sp-door" d="M240 318 V290 a16 16 0 0 1 32 0 V318"/>
+    </svg>
+    <p class="sp-name">home</p>
+  </div>
   <div class="glow" aria-hidden="true"></div>
 
   <header class="top">
@@ -80,7 +98,7 @@
     <form method="dialog" id="homeForm" autocomplete="off">
       <div class="sheet-grip" aria-hidden="true"></div>
       <div class="sheet-top">
-        <h2>設定</h2>
+        <h2 tabindex="-1" autofocus>設定</h2>
         <button class="sheet-done" id="sheetDone" type="button">完了</button>
       </div>
 
@@ -111,6 +129,11 @@
         <label class="toggle"><input type="checkbox" id="opt_sr"><span>フェリー</span></label>
       </div>
       <p class="sheet-hint">検索条件は、次に「帰る」を押したときから使われます</p>
+
+      <p class="group-label">表示</p>
+      <div class="toggles one">
+        <label class="toggle"><input type="checkbox" id="optSplash"><span>開いたときのアニメーション<small>タップで飛ばせます</small></span></label>
+      </div>
       <p class="sheet-version" id="version"></p>
     </form>
   </dialog>
@@ -127,8 +150,8 @@
     <div class="dia-list" id="diaList"></div>
   </dialog>
 
-  <script src="timeshift.js?v=8"></script>
-  <script src="app.js?v=8"></script>
-  <script src="dia.js?v=8"></script>
+  <script src="timeshift.js?v=9"></script>
+  <script src="app.js?v=9"></script>
+  <script src="dia.js?v=9"></script>
 </body>
 </html>

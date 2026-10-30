@@ -1,7 +1,7 @@
 'use strict';
 
 // 公開するたびに sw.js の CACHE と index.html の ?v= と一緒に上げる
-const APP_VERSION = '8';
+const APP_VERSION = '9';
 
 const $ = (id) => document.getElementById(id);
 const HOME_KEY = 'ie:home';
@@ -464,6 +464,7 @@ function openSheet() {
   $('sheetNote').textContent = home ? '' : 'はじめに家の場所を入れてください';
   Object.entries(SELECT_OPTS).forEach(([k, id]) => { $(id).value = opts[k]; });
   TOGGLE_OPTS.forEach((k) => { $(`opt_${k}`).checked = !!opts[k]; });
+  $('optSplash').checked = splashOn();
   dlg.showModal();
   dlg.scrollTop = 0;
   // 家が決まっていないときだけ、すぐ入力できるようにする（キーボードで設定が隠れないように）
@@ -547,7 +548,14 @@ $('homeSheet').addEventListener('close', () => {
   const v = $('homeInput').value.trim();
   if (v && v !== home) setHome(v);
 });
-$('homeSheet').addEventListener('change', (e) => { if (e.target.id !== 'homeInput') saveOpts(); });
+$('homeSheet').addEventListener('change', (e) => {
+  if (e.target.id === 'homeInput') return;
+  if (e.target.id === 'optSplash') {
+    try { if (e.target.checked) localStorage.removeItem(SPLASH_KEY); else save(SPLASH_KEY, 'off'); } catch (err) { /* 覚えられなくても今は使える */ }
+    return;
+  }
+  saveOpts();
+});
 
 renderTop();
 renderHomeLabel();
@@ -571,7 +579,45 @@ function playIntro() {
   window.scrollTo(0, 0);
   endIntroLater();
 }
-endIntroLater();
+
+// ---------- 開いたときのアニメーション（move と同じ流れ：丸 → 家を描く → 波） ----------
+const SPLASH_KEY = 'ie:splash';
+const splashOn = () => load(SPLASH_KEY) !== 'off';
+let splashSeq = 0;
+function runSplash() {
+  const root = document.documentElement;
+  if (!root.classList.contains('splash-on')) { endIntroLater(); return; }
+  const seq = ++splashSeq;
+  // 付け直すと CSS のアニメーションが最初から流れる
+  const old = $('splash');
+  const sp = old.cloneNode(true);
+  old.replaceWith(sp);
+  root.classList.remove('splash-reveal');
+  // 消えはじめたら、うしろで画面が順に出てくる（間が空かないように）
+  const reveal = () => {
+    if (seq !== splashSeq || root.classList.contains('splash-reveal')) return;
+    root.classList.add('splash-reveal');
+    playIntro();
+    endIntroLater();
+  };
+  const end = () => {
+    if (seq !== splashSeq || !root.classList.contains('splash-on')) return;
+    reveal();
+    root.classList.remove('splash-on', 'splash-reveal');
+  };
+  sp.addEventListener('animationstart', (e) => { if (e.target === sp && e.animationName === 'sp-out') reveal(); });
+  sp.addEventListener('animationend', (e) => { if (e.target === sp) end(); });
+  // タップで飛ばせる
+  sp.addEventListener('pointerdown', () => { sp.classList.add('done'); reveal(); setTimeout(end, 320); });
+  setTimeout(reveal, 1800);
+  setTimeout(end, 2600); // 念のため
+}
+function showSplash() {
+  if (!splashOn() || busy || document.querySelector('dialog[open]')) { playIntro(); return; }
+  document.documentElement.classList.add('splash-on');
+  runSplash();
+}
+runSplash();
 
 // ---------- 結果を消して最初の画面に戻す ----------
 let undoState = null;
@@ -606,9 +652,9 @@ function undoReset() {
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
-  if (hiddenAt && Date.now() - hiddenAt > 3000) playIntro();
+  if (hiddenAt && Date.now() - hiddenAt > 3000) showSplash();
 });
-window.addEventListener('pageshow', (e) => { if (e.persisted) playIntro(); });
+window.addEventListener('pageshow', (e) => { if (e.persisted) showSplash(); });
 setInterval(() => { renderTop(); renderCountdown(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderTop(); renderCountdown(); } });
 
