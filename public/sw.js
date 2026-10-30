@@ -1,5 +1,5 @@
 // オフラインでも画面を開けるよう、アプリ本体だけをキャッシュする
-const CACHE = 'ie-v6';
+const CACHE = 'ie-v7';
 const ASSETS = [
   './',
   './index.html',

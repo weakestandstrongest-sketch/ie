@@ -159,6 +159,8 @@ async function goHome() {
     }
     if (!data.routes || !data.routes.length) throw new Error(`経路が見つかりませんでした|${data.error || ''}`);
     state = { data, index: 0, searchedAt: now.getTime() };
+    $('toast').hidden = true;
+    undoState = null;
     expanded.clear();
     saveState();
     document.body.classList.add('has-result');
@@ -523,6 +525,8 @@ async function useHere() {
 // ---------- はじまり ----------
 $('go').addEventListener('click', goHome);
 $('settings').addEventListener('click', openSheet);
+$('reset').addEventListener('click', resetResult);
+$('undo').addEventListener('click', undoReset);
 $('homeLabel').addEventListener('click', openSheet);
 $('homeLabel').addEventListener('keydown', (e) => { if (e.key === 'Enter') openSheet(); });
 $('useHere').addEventListener('click', useHere);
@@ -565,6 +569,36 @@ function playIntro() {
   endIntroLater();
 }
 endIntroLater();
+
+// ---------- 結果を消して最初の画面に戻す ----------
+let undoState = null;
+let toastTimer = 0;
+function resetResult() {
+  if (busy || !state.data) return;
+  undoState = state;
+  state = { data: null, index: 0, searchedAt: 0 };
+  expanded.clear();
+  try { localStorage.removeItem(LAST_KEY); } catch (e) { /* 消せなくても画面は戻す */ }
+  document.body.classList.remove('has-result');
+  $('result').hidden = true;
+  hideMessage();
+  playIntro();
+  // うっかり押したときのために、少しのあいだ元に戻せるようにする
+  $('toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $('toast').hidden = true; undoState = null; }, 5000);
+}
+function undoReset() {
+  clearTimeout(toastTimer);
+  $('toast').hidden = true;
+  if (!undoState || state.data) return;
+  state = undoState;
+  undoState = null;
+  saveState();
+  document.body.classList.add('has-result');
+  renderResult(true);
+}
+
 // ホーム画面のアプリは、閉じても読み込み直さずに再開することが多いので、戻ってきたときにも流す
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {

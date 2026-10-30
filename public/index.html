@@ -26,6 +26,9 @@
       <p class="date" id="date"></p>
       <h1 class="greet" id="greet">おつかれさま</h1>
     </div>
+    <button class="settings reset" id="reset" type="button" aria-label="結果を消して最初の画面に戻す">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+    </button>
     <button class="settings" id="settings" type="button" aria-label="家の場所を設定">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.7 2.5a1 1 0 0 1 1 .8l.3 1.9a7.6 7.6 0 0 1 1.6.9l1.8-.7a1 1 0 0 1 1.2.4l1.7 3a1 1 0 0 1-.2 1.2l-1.5 1.2a7.7 7.7 0 0 1 0 1.8l1.5 1.2a1 1 0 0 1 .2 1.2l-1.7 3a1 1 0 0 1-1.2.4l-1.8-.7a7.6 7.6 0 0 1-1.6.9l-.3 1.9a1 1 0 0 1-1 .8h-3.4a1 1 0 0 1-1-.8l-.3-1.9a7.6 7.6 0 0 1-1.6-.9l-1.8.7a1 1 0 0 1-1.2-.4l-1.7-3a1 1 0 0 1 .2-1.2l1.5-1.2a7.7 7.7 0 0 1 0-1.8L2.9 9.9a1 1 0 0 1-.2-1.2l1.7-3a1 1 0 0 1 1.2-.4l1.8.7a7.6 7.6 0 0 1 1.6-.9l.3-1.9a1 1 0 0 1 1-.8zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/></svg>
     </button>
@@ -60,6 +63,11 @@
   <p class="home-label" id="homeLabel" role="link" tabindex="0"></p>
 
   <div class="veil" aria-hidden="true"></div>
+
+  <div class="toast" id="toast" role="status" hidden>
+    <span>結果を消しました</span>
+    <button type="button" id="undo">元に戻す</button>
+  </div>
 
   <button class="go" id="go" type="button" aria-label="帰る">
     <span class="go-ring" aria-hidden="true"></span>
