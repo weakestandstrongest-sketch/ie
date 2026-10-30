@@ -2,6 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const HOME_KEY = 'ie:home';
+const LAST_KEY = 'ie:last';
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 
 const ICONS = {
@@ -9,15 +10,19 @@ const ICONS = {
   walk: '<svg viewBox="0 0 24 24"><circle class="solid" cx="13" cy="4.2" r="1.9"/><path d="M9.5 21l2.2-6.2M11.7 14.8l2.6 2.4.9 3.8M8 11.4l2.4-3.2 3.4.6 1.4 3 2.6 1.2M10.4 8.2l1.3 6.6"/></svg>',
   train: '<svg viewBox="0 0 24 24"><rect x="5.5" y="3.5" width="13" height="14" rx="4"/><path d="M5.5 10.5h13M9 14.3h.01M15 14.3h.01M8.5 21l1.8-3.5M15.5 21l-1.8-3.5"/></svg>',
   bus: '<svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="14" rx="3"/><path d="M4.5 11h15M8.2 14.5h.01M15.8 14.5h.01M7.5 17.5V20M16.5 17.5V20"/></svg>',
-  station: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg>',
   home: '<svg viewBox="0 0 24 24"><path class="solid" d="M3.5 10.6 12 3.8l8.5 6.8V19a1.6 1.6 0 0 1-1.6 1.6h-4.1v-5.4H9.2v5.4H5.1A1.6 1.6 0 0 1 3.5 19z"/></svg>',
 };
 
-let state = { data: null, index: 0, searchedAt: null };
+// 種類ごとの色（タイムラインのグラデーションに使う）
+const COLOR = { start: 'var(--ink)', walk: 'var(--walk)', home: 'var(--accent)', ride: 'var(--accent)' };
+
+// data: 検索結果 / index: 表示中のルート / searchedAt: 検索した時刻（ミリ秒）
+let state = { data: null, index: 0, searchedAt: 0 };
 let busy = false;
 
 // ---------- 小さな道具 ----------
 const pad2 = (n) => String(n).padStart(2, '0');
+const hm = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 const toMin = (t) => {
   const m = /^(\d{1,2}):(\d{2})$/.exec(t || '');
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
@@ -30,20 +35,40 @@ const diffMin = (a, b) => {
   if (d < -12 * 60) d += 24 * 60;
   return d;
 };
+// ref より後（slack 分だけ前まで許す）で最初の「時:分」の日時
+function at(ref, t, slack = 0) {
+  const m = toMin(t);
+  if (m == null) return null;
+  const d = new Date(ref);
+  d.setHours(Math.floor(m / 60), m % 60, 0, 0);
+  while (d < ref - slack * 60000) d.setDate(d.getDate() + 1);
+  return d;
+}
+function dayLabel(d) {
+  if (!d) return '';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - today) / 86400000);
+  if (days === 0) return '';
+  if (days === 1) return '明日';
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+const mix = (a, b) => `color-mix(in srgb, ${a} 50%, ${b})`;
+// 「則武本郷/岐阜バス」→「則武本郷」
+const placeName = (s) => String(s || '').replace(/\/[^/]*$/, '');
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text != null) e.textContent = text;
   return e;
 }
-function getHome() {
-  try { return localStorage.getItem(HOME_KEY) || ''; } catch (e) { return ''; }
+function load(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
 }
-function setHome(v) {
-  try { localStorage.setItem(HOME_KEY, v); } catch (e) { /* 保存できなくても今回は使う */ }
-  memoryHome = v;
+function save(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* 保存できなくても今は使える */ }
 }
-let memoryHome = getHome();
+let home = load(HOME_KEY) || '';
 
 // ---------- 見出し ----------
 function renderTop() {
@@ -56,9 +81,8 @@ function renderTop() {
 function renderHomeLabel() {
   const label = $('homeLabel');
   label.textContent = '';
-  if (memoryHome) {
-    label.append('家 · ');
-    label.append(el('b', null, memoryHome));
+  if (home) {
+    label.append('家 · ', el('b', null, placeName(home)));
   } else {
     label.textContent = '家の場所を設定する';
   }
@@ -85,7 +109,7 @@ async function locate() {
 // ---------- 帰る ----------
 async function goHome() {
   if (busy) return;
-  if (!memoryHome) { openSheet(); return; }
+  if (!home) { openSheet(); return; }
   busy = true;
   document.body.classList.add('loading');
   $('goText').textContent = '探しています';
@@ -103,9 +127,9 @@ async function goHome() {
     const q = new URLSearchParams({
       lat: pos.coords.latitude.toFixed(6),
       lng: pos.coords.longitude.toFixed(6),
-      home: memoryHome,
+      home,
       date: `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`,
-      time: `${pad2(now.getHours())}:${pad2(now.getMinutes())}`,
+      time: hm(now),
     });
     let data;
     try {
@@ -115,10 +139,11 @@ async function goHome() {
       throw new Error('つながりませんでした|電波のよいところで、もう一度押してください');
     }
     if (!data.routes || !data.routes.length) throw new Error(`経路が見つかりませんでした|${data.error || ''}`);
-    state = { data, index: 0, searchedAt: now };
-    renderResult();
+    state = { data, index: 0, searchedAt: now.getTime() };
+    saveState();
     document.body.classList.add('has-result');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    renderResult(true);
+    window.scrollTo(0, 0);
   } catch (e) {
     const [title, body] = String(e.message).split('|');
     showMessage(title, body);
@@ -129,25 +154,43 @@ async function goHome() {
   }
 }
 
+// 「帰る」を押し直すまで、前の結果を覚えておく
+function saveState() {
+  save(LAST_KEY, JSON.stringify(state));
+}
+function restoreState() {
+  try {
+    const s = JSON.parse(load(LAST_KEY) || 'null');
+    if (s && s.data && Array.isArray(s.data.routes) && s.data.routes.length) {
+      state = { data: s.data, index: Math.min(s.index || 0, s.data.routes.length - 1), searchedAt: s.searchedAt || Date.now() };
+      return true;
+    }
+  } catch (e) { /* 読めなければ最初から */ }
+  return false;
+}
+
 // ---------- 経路をタイムラインにする ----------
 function departPlatform(platform) {
   const m = /\[発\]\s*([^\s→]+)/.exec(platform || '');
   return m ? m[1] : '';
 }
 
+// 経路の手順を、タイムラインの項目と「つなぎ」（乗換の待ち時間など）にする
 function buildItems(route, start, homeName) {
   const steps = route.steps || [];
   const last = steps.length - 1;
   const items = [];
+  let note = '';
+  const push = (it) => { it.note = note; note = ''; items.push(it); };
   steps.forEach((s, i) => {
     if (s.kind === 'station') {
       if (i === 0) {
-        items.push({ type: 'start', time: s.dep, title: start.station ? `${s.name}から` : '現在地を出発', sub: start.station ? '' : s.name });
+        push({ type: 'start', time: s.dep, title: start && start.station ? `${placeName(s.name)}から` : '現在地を出発', sub: start && start.station ? '' : s.name });
       } else if (i === last) {
-        items.push({ type: 'home', time: s.arr, title: '家に到着', sub: homeName });
+        push({ type: 'home', time: s.arr, title: '家に到着', sub: placeName(homeName) });
       } else {
         const wait = diffMin(s.arr, s.dep);
-        items.push({ type: 'gap', note: wait > 0 ? `${s.name} · ${wait}分待ち` : s.name });
+        note = wait > 0 ? `${placeName(s.name)} · ${wait}分待ち` : placeName(s.name);
       }
       return;
     }
@@ -156,14 +199,16 @@ function buildItems(route, start, homeName) {
     const minutes = diffMin(prev.dep, next.arr);
     if (s.walk) {
       const n = s.walkMinutes != null ? s.walkMinutes : minutes;
-      items.push({ type: 'walk', time: prev.dep, end: next.arr, minutes: n, title: n != null ? `歩く ${n}分` : '歩く', sub: s.exit ? `${s.exit} へ` : `${next.name || ''}まで` });
+      const exit = s.exit && s.exit !== '徒歩' ? s.exit : '';
+      push({ type: 'walk', time: prev.dep, minutes: n, title: n != null ? `歩く ${n}分` : '歩く', sub: exit ? `${exit} から` : next.name && next.kind === 'station' && steps.indexOf(next) !== last ? `${placeName(next.name)}まで` : '' });
       return;
     }
     const meta = [];
+    if (minutes != null) meta.push(`${minutes}分`);
     const plat = departPlatform(s.platform);
     if (plat) meta.push(plat);
     if (s.stops) meta.push(s.stops);
-    items.push({
+    push({
       type: 'ride',
       bus: /バス/.test(s.line),
       time: prev.dep,
@@ -172,105 +217,135 @@ function buildItems(route, start, homeName) {
       color: s.color,
       title: s.line,
       small: s.destination,
-      sub: `${prev.name || ''} → ${next.name || ''}`,
+      sub: `${placeName(prev.name)} → ${placeName(next.name)}`,
       meta,
       alert: s.alert ? (s.alertText || '運行情報あり') : '',
     });
   });
-  // 前後に「つなぎ」がない所にも点線を入れる
-  const out = [];
+  // 線の色：電車・バスはその路線の色、歩くところは前後の路線の色のあいだ
+  const rideColor = (from, step) => {
+    for (let j = from; j >= 0 && j < items.length; j += step) if (items[j].type === 'ride') return items[j].color || COLOR.ride;
+    return null;
+  };
   items.forEach((it, i) => {
-    if (i > 0 && it.type !== 'gap' && items[i - 1].type !== 'gap') out.push({ type: 'gap', note: '' });
-    out.push(it);
+    it.c = it.color || COLOR[it.type];
+    if (it.type === 'ride' || it.type === 'home') it.lc = it.c;
+    else {
+      const before = rideColor(i - 1, -1);
+      const after = rideColor(i + 1, 1) || COLOR.home;
+      it.lc = before ? mix(before, after) : after;
+    }
   });
-  return out;
+  return items;
 }
 
-function renderItem(it, delay) {
-  if (it.type === 'gap') {
-    const li = el('li', 'gap');
-    li.style.animationDelay = `${delay}ms`;
-    li.append(el('span'), el('span', 'dots'));
-    if (it.note) li.append(el('p', 'note', it.note));
-    return li;
-  }
+function renderItem(it, next) {
   const li = el('li', `item ${it.type}`);
-  li.style.animationDelay = `${delay}ms`;
-  if (it.color) li.style.setProperty('--c', it.color);
+  li.style.setProperty('--c', it.c);
 
+  const pillHeight = it.type === 'ride' && it.minutes != null ? Math.max(72, Math.min(180, 40 + it.minutes * 3)) : 48;
   const t = el('div', 't');
+  t.style.height = `${pillHeight}px`;
   t.append(el('span', null, it.time || ''));
-  if (it.end && it.type === 'ride') t.append(el('span', null, it.end));
+  if (it.end && it.type === 'ride') t.append(el('span', 'end', it.end));
+
+  const rail = el('div', 'rail');
   const pill = el('div', 'pill');
   pill.innerHTML = ICONS[it.type === 'ride' ? (it.bus ? 'bus' : 'train') : it.type === 'start' ? 'pin' : it.type];
-  if (it.type === 'ride' && it.minutes != null) pill.style.height = `${Math.max(64, Math.min(180, 40 + it.minutes * 3))}px`;
+  pill.style.height = `${pillHeight}px`;
+  rail.append(pill);
+  if (next) {
+    const tail = el('span', 'tail');
+    tail.style.setProperty('--from', it.lc);
+    tail.style.setProperty('--to', mix(it.lc, next.lc));
+    rail.append(tail);
+  }
 
   const body = el('div', 'body');
   const title = el('p', 'title', it.title);
   if (it.small) title.append(el('small', null, it.small));
   body.append(title);
   if (it.sub) body.append(el('p', 'sub', it.sub));
-  const metaItems = [...(it.meta || [])];
-  if (it.minutes != null && it.type === 'ride') metaItems.unshift(`${it.minutes}分`);
-  if (metaItems.length || it.alert) {
+  if ((it.meta && it.meta.length) || it.alert) {
     const ul = el('ul', 'meta');
-    metaItems.forEach((m) => ul.append(el('li', null, m)));
+    (it.meta || []).forEach((m) => ul.append(el('li', null, m)));
     if (it.alert) ul.append(el('li', 'warn', `⚠︎ ${it.alert}`));
     body.append(ul);
   }
-  li.append(t, pill, body);
+  li.append(t, rail, body);
   return li;
 }
 
-function cleanDuration(d) {
-  return (d || '').replace(/\(.*?\)/g, '').trim();
+function renderGap(prev, next) {
+  const li = el('li', 'gap');
+  li.append(el('span'));
+  const dots = el('span', 'dots');
+  dots.style.setProperty('--from', mix(prev.lc, next.lc));
+  dots.style.setProperty('--to', next.lc);
+  li.append(dots);
+  if (next.note) li.append(el('p', 'note', next.note));
+  return li;
+}
+
+const cleanDuration = (d) => (d || '').replace(/\(.*?\)/g, '').trim();
+
+function routeTimes(route) {
+  const depAt = at(state.searchedAt, route.summary.dep, 30);
+  const arrAt = depAt ? at(depAt.getTime(), route.summary.arr) : null;
+  return { depAt, arrAt };
 }
 
 function renderCountdown() {
-  const { data, index, searchedAt } = state;
+  const { data, index } = state;
   if (!data) return;
-  const dep = data.routes[index].summary.dep;
+  const { depAt } = routeTimes(data.routes[index]);
   const badge = $('countdown');
-  const now = new Date();
-  const left = diffMin(`${now.getHours()}:${pad2(now.getMinutes())}`, dep);
   badge.className = 'badge';
-  if (left == null) {
-    badge.textContent = '';
-  } else if (left <= 0) {
-    badge.textContent = left === 0 ? '今すぐ出発' : '出発時刻を過ぎました';
-    badge.classList.add(left === 0 ? 'now' : 'past');
+  if (!depAt) { badge.textContent = ''; return; }
+  const left = Math.floor((depAt - Date.now()) / 60000);
+  if (left < 0) {
+    badge.textContent = '出発時刻を過ぎました';
+    badge.classList.add('past');
+  } else if (left === 0) {
+    badge.textContent = '今すぐ出発';
+    badge.classList.add('now');
   } else {
     badge.textContent = left >= 60 ? `あと${Math.floor(left / 60)}時間${left % 60}分` : `あと${left}分`;
     if (left <= 3) badge.classList.add('now');
   }
-  // 1 時間以上たったら古い結果として下げる
-  if (searchedAt && now - searchedAt > 60 * 60 * 1000) badge.classList.add('past');
 }
 
-function renderResult() {
+function renderResult(animate) {
   const { data, index } = state;
   const route = data.routes[index];
   const s = route.summary;
-  $('result').hidden = false;
+  const { depAt, arrAt } = routeTimes(route);
+  const result = $('result');
+  result.hidden = false;
+  result.classList.remove('enter');
+  if (animate) { void result.offsetWidth; result.classList.add('enter'); }
+
   $('arrTime').textContent = s.arr || '--:--';
-  $('depTime').textContent = s.dep ? `${s.dep} に出発` : '';
+  $('arrDay').textContent = dayLabel(arrAt);
+  $('depTime').textContent = s.dep ? `${dayLabel(depAt)}${s.dep} に出発` : '';
   renderCountdown();
 
   const facts = $('facts');
   facts.textContent = '';
-  const fact = (label, value) => {
-    const li = el('li');
-    li.append(el('b', null, value), ` ${label}`);
-    facts.append(li);
-  };
-  if (s.duration) fact('', cleanDuration(s.duration));
-  if (s.fare != null) fact('', `¥${s.fare.toLocaleString()}`);
-  if (s.transfers != null) fact('', s.transfers ? `乗換${s.transfers}回` : '乗換なし');
-  if (s.tags && s.tags.length) fact('', s.tags.join(' · '));
+  const fact = (value) => { const li = el('li'); li.append(el('b', null, value)); facts.append(li); };
+  if (s.duration) fact(cleanDuration(s.duration));
+  if (s.fare != null) fact(`¥${s.fare.toLocaleString()}`);
+  if (s.transfers != null) fact(s.transfers ? `乗換${s.transfers}回` : '乗換なし');
+  if (s.tags && s.tags.length) fact(s.tags.join(' · '));
 
   const tl = $('timeline');
   tl.textContent = '';
-  buildItems(route, data.start, data.home).forEach((it, i) => tl.append(renderItem(it, 60 + i * 45)));
+  const items = buildItems(route, data.start, data.home);
+  items.forEach((it, i) => {
+    if (i > 0) tl.append(renderGap(items[i - 1], it));
+    tl.append(renderItem(it, items[i + 1]));
+  });
+  if (animate) [...tl.children].forEach((li, i) => { li.style.animationDelay = `${80 + i * 35}ms`; });
 
   const others = $('others');
   others.textContent = '';
@@ -279,12 +354,9 @@ function renderResult() {
     const li = el('li', 'other');
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
-    const stripe = el('div', 'stripe');
-    r.steps.filter((x) => x.kind === 'access').forEach((x) => {
-      const bar = el('i');
-      if (!x.walk && x.color) bar.style.setProperty('--c', x.color);
-      stripe.append(bar);
-    });
+    const colors = r.steps.filter((x) => x.kind === 'access' && !x.walk).map((x) => x.color || 'var(--accent)');
+    const stripe = el('span', 'stripe');
+    if (colors.length) stripe.style.setProperty('--stripe', (colors.length > 1 ? colors : [colors[0], colors[0]]).join(', '));
     const time = el('div', 'other-time');
     time.append(r.summary.dep, el('span', null, '→'), r.summary.arr);
     const meta = el('div', 'other-meta');
@@ -292,8 +364,9 @@ function renderResult() {
     li.append(stripe, time, meta);
     const pick = () => {
       state.index = i;
-      renderResult();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      saveState();
+      renderResult(true);
+      window.scrollTo(0, 0);
     };
     li.addEventListener('click', pick);
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(); });
@@ -301,6 +374,9 @@ function renderResult() {
   });
   $('othersWrap').hidden = !others.children.length;
   $('yahooLink').href = data.yahooUrl || 'https://transit.yahoo.co.jp/';
+
+  const when = new Date(state.searchedAt);
+  $('saved').textContent = `${dayLabel(when) ? `${when.getMonth() + 1}月${when.getDate()}日 ` : ''}${hm(when)} に調べた経路`;
 }
 
 // ---------- 家の設定 ----------
@@ -309,22 +385,20 @@ let suggestSeq = 0;
 
 function openSheet() {
   const dlg = $('homeSheet');
-  $('homeInput').value = memoryHome;
+  $('homeInput').value = home;
   $('suggest').textContent = '';
-  $('sheetNote').textContent = '';
+  $('sheetNote').textContent = home ? `いまの設定：${home}` : '';
   dlg.showModal();
   setTimeout(() => $('homeInput').focus(), 250);
 }
 
 function saveHome(v) {
   v = (v || '').trim();
-  if (!v) { $('sheetNote').textContent = '駅名か住所を入れてください'; return; }
-  setHome(v);
+  if (!v) { $('sheetNote').textContent = '駅名・バス停か住所を入れてください'; return; }
+  home = v;
+  save(HOME_KEY, v);
   renderHomeLabel();
   $('homeSheet').close();
-  state = { data: null, index: 0, searchedAt: null };
-  document.body.classList.remove('has-result');
-  $('result').hidden = true;
   hideMessage();
 }
 
@@ -341,8 +415,7 @@ async function loadSuggest(q) {
   list.textContent = '';
   items.forEach((c) => {
     const li = el('li', null, c.name || c.value);
-    const kind = c.kind === 'bus' ? `バス停${c.company ? ` · ${c.company}` : ''}` : '駅';
-    li.append(el('small', null, kind));
+    li.append(el('small', null, c.kind === 'bus' ? `バス停${c.company ? ` · ${c.company}` : ''}` : '駅'));
     li.addEventListener('click', () => saveHome(c.value));
     list.append(li);
   });
@@ -366,6 +439,7 @@ async function useHere() {
 
 // ---------- はじまり ----------
 $('go').addEventListener('click', goHome);
+$('settings').addEventListener('click', openSheet);
 $('homeLabel').addEventListener('click', openSheet);
 $('homeLabel').addEventListener('keydown', (e) => { if (e.key === 'Enter') openSheet(); });
 $('useHere').addEventListener('click', useHere);
@@ -380,6 +454,10 @@ $('homeSheet').addEventListener('click', (e) => { if (e.target === e.currentTarg
 
 renderTop();
 renderHomeLabel();
+if (restoreState()) {
+  document.body.classList.add('has-result');
+  renderResult(false);
+}
 setInterval(() => { renderTop(); renderCountdown(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderTop(); renderCountdown(); } });
 
