@@ -345,7 +345,7 @@ function renderResult(animate) {
     if (i > 0) tl.append(renderGap(items[i - 1], it));
     tl.append(renderItem(it, items[i + 1]));
   });
-  if (animate) [...tl.children].forEach((li, i) => { li.style.animationDelay = `${80 + i * 35}ms`; });
+  [...tl.children].forEach((li, i) => li.style.setProperty('--i', i));
 
   const others = $('others');
   others.textContent = '';
@@ -456,8 +456,10 @@ renderTop();
 renderHomeLabel();
 if (restoreState()) {
   document.body.classList.add('has-result');
-  renderResult(false);
+  renderResult(true);
 }
+// 開いたときのアニメーションが終わったら、ふだんの動きに戻す
+setTimeout(() => document.documentElement.classList.remove('intro'), 1600);
 setInterval(() => { renderTop(); renderCountdown(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderTop(); renderCountdown(); } });
 
