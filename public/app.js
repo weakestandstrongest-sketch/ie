@@ -1,7 +1,7 @@
 'use strict';
 
 // 公開するたびに sw.js の CACHE と index.html の ?v= と一緒に上げる
-const APP_VERSION = '9';
+const APP_VERSION = '10';
 
 const $ = (id) => document.getElementById(id);
 const HOME_KEY = 'ie:home';
@@ -161,8 +161,8 @@ async function goHome() {
       throw new Error('つながりませんでした|電波のよいところで、もう一度押してください');
     }
     if (!data.routes || !data.routes.length) throw new Error(`経路が見つかりませんでした|${data.error || ''}`);
-    state = { data, index: 0, searchedAt: now.getTime() };
-    $('toast').hidden = true;
+    state = { data, index: 0, searchedAt: now.getTime(), added: [] };
+    hideToast();
     undoState = null;
     expanded.clear();
     saveState();
@@ -187,7 +187,7 @@ function restoreState() {
   try {
     const s = JSON.parse(load(LAST_KEY) || 'null');
     if (s && s.data && Array.isArray(s.data.routes) && s.data.routes.length) {
-      state = { data: s.data, index: Math.min(s.index || 0, s.data.routes.length - 1), searchedAt: s.searchedAt || Date.now() };
+      state = { data: s.data, index: Math.min(s.index || 0, s.data.routes.length - 1), searchedAt: s.searchedAt || Date.now(), added: Array.isArray(s.added) ? s.added : [] };
       return true;
     }
   } catch (e) { /* 読めなければ最初から */ }
@@ -448,6 +448,7 @@ function renderResult(animate) {
   });
   $('othersWrap').hidden = !others.children.length;
   $('yahooLink').href = data.yahooUrl || 'https://transit.yahoo.co.jp/';
+  if (typeof renderHibiBtn === 'function') renderHibiBtn();
 
   const when = new Date(state.searchedAt);
   $('saved').textContent = `${dayLabel(when) ? `${when.getMonth() + 1}月${when.getDate()}日 ` : ''}${hm(when)} に調べた経路`;
@@ -530,7 +531,6 @@ async function useHere() {
 $('go').addEventListener('click', goHome);
 $('settings').addEventListener('click', openSheet);
 $('reset').addEventListener('click', resetResult);
-$('undo').addEventListener('click', undoReset);
 $('homeLabel').addEventListener('click', openSheet);
 $('homeLabel').addEventListener('keydown', (e) => { if (e.key === 'Enter') openSheet(); });
 $('useHere').addEventListener('click', useHere);
@@ -619,9 +619,30 @@ function showSplash() {
 }
 runSplash();
 
+// ---------- 下に出るお知らせ（ボタンをひとつ付けられる） ----------
+let toastTimer = 0;
+let toastFn = null;
+function showToast(text, label, fn, ms = 5000) {
+  $('toastText').textContent = text;
+  $('toastAction').textContent = label || '';
+  $('toastAction').hidden = !label;
+  toastFn = fn || null;
+  const t = $('toast');
+  t.hidden = true;
+  void t.offsetWidth; // 続けて出すときも、出てくる動きを最初から
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, ms);
+}
+function hideToast() {
+  clearTimeout(toastTimer);
+  $('toast').hidden = true;
+  toastFn = null;
+}
+$('toastAction').addEventListener('click', () => { const fn = toastFn; hideToast(); if (fn) fn(); });
+
 // ---------- 結果を消して最初の画面に戻す ----------
 let undoState = null;
-let toastTimer = 0;
 function resetResult() {
   if (busy || !state.data) return;
   undoState = state;
@@ -633,13 +654,9 @@ function resetResult() {
   hideMessage();
   playIntro();
   // うっかり押したときのために、少しのあいだ元に戻せるようにする
-  $('toast').hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { $('toast').hidden = true; undoState = null; }, 5000);
+  showToast('結果を消しました', '元に戻す', undoReset);
 }
 function undoReset() {
-  clearTimeout(toastTimer);
-  $('toast').hidden = true;
   if (!undoState || state.data) return;
   state = undoState;
   undoState = null;

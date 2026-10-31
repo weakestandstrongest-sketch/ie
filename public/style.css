@@ -127,9 +127,11 @@ body:not(.has-result) .reset { display: none; }
   border-radius: 999px;
   background: var(--ink);
   color: var(--bg);
+  width: max-content;
+  max-width: calc(100vw - 32px);
   font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 1.45;
   transform: translateX(-50%);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .4);
   animation: toast-in .4s var(--spring) both;
@@ -144,6 +146,11 @@ body:not(.has-result) .reset { display: none; }
   font-weight: 700;
   cursor: pointer;
 }
+.toast span { padding: 4px 0; }
+.toast button { flex: none; }
+.toast button[hidden] { display: none; }
+.toast:has(button[hidden]) { padding-right: 18px; }
+.has-result .toast { bottom: calc(var(--safe-b) + 92px); }
 @keyframes toast-in { from { transform: translateX(-50%) translateY(16px); opacity: 0; } }
 
 
@@ -637,6 +644,60 @@ body:not(.has-result).loading .go-text { font-size: 20px; letter-spacing: .06em;
 .sheet-hint { margin: 18px 0 0; text-align: center; font-size: 12px; color: var(--ink-3); }
 .sheet-version { margin: 6px 0 0; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); }
 
+/* ---------- ひび手帳に追加 ---------- */
+.hibi-add {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: left;
+  cursor: pointer;
+  transition: transform .15s ease;
+}
+.hibi-add:active { transform: scale(.98); }
+.hibi-add:disabled { opacity: .7; }
+.hibi-ico {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: linear-gradient(155deg, var(--accent-2), var(--accent));
+  color: #fff;
+}
+.hibi-ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: opacity .25s, transform .35s var(--spring); }
+.hibi-ico .check { position: absolute; stroke-width: 2.8; opacity: 0; transform: scale(.4); }
+.hibi-add.done .hibi-ico { background: var(--walk); color: var(--accent); }
+.hibi-add.done .hibi-ico svg:not(.check) { opacity: 0; transform: scale(.4); }
+.hibi-add.done .hibi-ico .check { opacity: 1; transform: none; }
+.hibi-label { display: flex; flex-direction: column; min-width: 0; }
+.hibi-label b { font-size: 16px; font-weight: 800; }
+.hibi-label small { margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+
+.gd-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.pill-btn {
+  flex: none;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pill-btn.primary { background: var(--accent); color: #fff; box-shadow: none; }
+.sheet-hint.left { text-align: left; margin: 8px 4px 0; line-height: 1.55; }
+
 /* ---------- 乗り物：アイコンで前後の便、本文で途中の駅 ---------- */
 button.pill {
   border: 0;
@@ -830,7 +891,7 @@ button.pill::after {
 .sp-disc { transform: scale(0); animation: sp-pop .55s var(--spring) .1s forwards; }
 /* 2. 家を一筆で描いて、扉が入る */
 .sp-house { fill: none; stroke: #fff; stroke-width: 16; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; animation: sp-draw .6s ease-in-out .45s forwards; }
-.sp-door { fill: none; stroke: #fff; stroke-width: 14; stroke-linejoin: round; stroke-linecap: round; transform-origin: 256px 318px; transform: scale(0); animation: sp-pop .4s var(--spring) .98s forwards; }
+.sp-door { fill: none; stroke: #fff; stroke-width: 14; stroke-linejoin: round; stroke-linecap: round; transform-origin: 256px 306px; transform: scale(0); animation: sp-pop .4s var(--spring) .98s forwards; }
 /* 3. 「ただいま」の合図に、波が2回広がり、アイコンと同じ輪が残る */
 .sp-wave { fill: none; stroke: var(--accent); stroke-width: 6; opacity: 0; animation: sp-wave 1s cubic-bezier(.2, .6, .3, 1) 1.05s forwards; }
 .sp-wave.w2 { animation-delay: 1.25s; }

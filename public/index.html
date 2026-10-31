@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
   <script>
     // 開いたときのアニメーション（設定でオフにできる。Google のログインから戻ったときも出す）
     document.documentElement.classList.add('intro');
@@ -32,8 +32,8 @@
       <circle class="sp-ring r2" cx="256" cy="256" r="196"/>
       <circle class="sp-ring r1" cx="256" cy="256" r="160"/>
       <circle class="sp-disc" cx="256" cy="256" r="122" fill="url(#spg)"/>
-      <path class="sp-house" pathLength="100" d="M256 318 H208 Q198 318 198 308 V250 L256 200 L314 250 V308 Q314 318 304 318 Z"/>
-      <path class="sp-door" d="M240 318 V290 a16 16 0 0 1 32 0 V318"/>
+      <path class="sp-house" pathLength="100" d="M256 306 H208 Q198 306 198 296 V238 L256 188 L314 238 V296 Q314 306 304 306 Z"/>
+      <path class="sp-door" d="M240 306 V278 a16 16 0 0 1 32 0 V306"/>
     </svg>
     <p class="sp-name">home</p>
   </div>
@@ -63,6 +63,11 @@
 
       <ol class="timeline" id="timeline"></ol>
 
+      <button class="hibi-add" id="hibiAdd" type="button">
+        <span class="hibi-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="hibi-label"><b id="hibiAddText">ひび手帳に追加</b><small id="hibiAddSub"></small></span>
+      </button>
+
       <div class="others" id="othersWrap" hidden>
         <p class="section-label">ほかの電車</p>
         <ul class="others-list" id="others"></ul>
@@ -83,8 +88,8 @@
   <div class="veil" aria-hidden="true"></div>
 
   <div class="toast" id="toast" role="status" hidden>
-    <span>結果を消しました</span>
-    <button type="button" id="undo">元に戻す</button>
+    <span id="toastText"></span>
+    <button type="button" id="toastAction"></button>
   </div>
 
   <button class="go" id="go" type="button" aria-label="帰る">
@@ -130,6 +135,12 @@
       </div>
       <p class="sheet-hint">検索条件は、次に「帰る」を押したときから使われます</p>
 
+      <p class="group-label">ひび手帳</p>
+      <div class="group">
+        <div class="row"><span class="gd-status" id="gdStatus">ログインしていません</span><button class="pill-btn" id="gdBtn" type="button">Googleでログイン</button></div>
+      </div>
+      <p class="sheet-hint left">ひび手帳と同じGoogleアカウントでログインすると、結果の「ひび手帳に追加」で経路を予定に入れられます（ひび手帳を開いたときに入ります）。</p>
+
       <p class="group-label">表示</p>
       <div class="toggles one">
         <label class="toggle"><input type="checkbox" id="optSplash"><span>開いたときのアニメーション<small>タップで飛ばせます</small></span></label>
@@ -150,8 +161,9 @@
     <div class="dia-list" id="diaList"></div>
   </dialog>
 
-  <script src="timeshift.js?v=9"></script>
-  <script src="app.js?v=9"></script>
-  <script src="dia.js?v=9"></script>
+  <script src="timeshift.js?v=10"></script>
+  <script src="app.js?v=10"></script>
+  <script src="dia.js?v=10"></script>
+  <script src="drive.js?v=10"></script>
 </body>
 </html>

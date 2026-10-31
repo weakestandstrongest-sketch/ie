@@ -24,7 +24,10 @@ iPhone ──▶ Cloudflare Worker ──▶ 現在地の住所・最寄り駅�
    - 乗換駅なら、そこに着く前に出る便は「乗り継げません」になる
 5. 調べた経路は端末に保存され、「帰る」を押し直すまで残る
 6. 開いたとき（アプリに戻ってきたときも）は、move と同じ流れのアニメーション：丸が出て、家を一筆で描き、扉が入って、波が広がってからアプリへ（約2秒・タップで飛ばせる・設定でオフにできる）。アイコンと同じ形
-7. 右上の歯車で、家の場所と検索条件（表示順・特急の席・歩く速さ・運賃・使う乗り物）を変えられる
+7. 結果の「ひび手帳に追加」で、その経路をひび手帳の予定に入れられる（ひび手帳と同じGoogleアカウントでログインして使う。はじめて押すとログインに進み、戻ってきたら自動で送る）
+   - 経路は Google ドライブの「アプリ専用の場所」の `hibi-inbox.json` に置き、ひび手帳（2.27.0 以降）が開いたときに読んで予定に入れる
+   - ログインは ひび手帳・move と同じく乗換案内の Worker（`/hibi-auth/`）を通す。この URL の `ie.` を `norikae.` にしたところを使う
+8. 右上の歯車で、家の場所と検索条件（表示順・特急の席・歩く速さ・運賃・使う乗り物）を変えられる
 
 ## 公開方法（Cloudflare Workers・無料）
 
@@ -43,6 +46,7 @@ npm run dev   # http://localhost:8787
 - `public/` … 画面（HTML / CSS / JS）
 - `src/index.js` … Worker（`/api/home` `/api/search` `/api/timetable` `/api/train` `/api/suggest` `/api/where`）
 - `public/dia.js` … 前後の便
+- `public/drive.js` … Google ログインと、ひび手帳への経路の受け渡し
 - `src/yahoo.js` `src/suggest.js` `src/nearest.js` `src/timetable.js` `src/train.js` `public/timeshift.js` … のりかえから流用
 
 個人利用を前提にしています。URL を広く公開しないでください。
