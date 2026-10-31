@@ -936,17 +936,15 @@ button.pill::after {
   pointer-events: none;
 }
 .intro .home-label { animation: rise .6s var(--ease) .75s both; }
-.intro .has-result .go { animation: pop-intro .5s var(--spring) .5s both; }
+.intro .has-result .go { animation-delay: .5s; }
 .intro .summary > * { animation: rise .6s var(--ease) both; }
 .intro .summary > :nth-child(1) { animation-delay: .1s; }
 .intro .summary > :nth-child(2) { animation-delay: .16s; }
 .intro .summary > :nth-child(3) { animation-delay: .22s; }
 .intro .summary > :nth-child(4) { animation-delay: .28s; }
-.intro .result.enter .item, .intro .result.enter .gap { animation-name: rise-intro; animation-delay: calc(var(--i, 0) * 35ms + .32s); }
-@keyframes rise-intro { from { opacity: 0; transform: translate3d(0, 16px, 0); } }
+.intro .result.enter .item, .intro .result.enter .gap { animation-delay: calc(var(--i, 0) * 35ms + .32s); }
 
 @keyframes fade { from { opacity: 0; } }
-@keyframes pop-intro { from { transform: translateX(-50%) translateY(20px) scale(.9); opacity: 0; } }
 @keyframes pop-in { from { transform: scale(.4); opacity: 0; } }
 @keyframes drop { from { transform: translateY(-16px) scale(.6); opacity: 0; } }
 @keyframes burst {
@@ -957,11 +955,9 @@ button.pill::after {
 /* 「視差効果を減らす」がオンのときは、動きをやめてふわっと出るだけにする */
 @media (prefers-reduced-motion: reduce) {
   @keyframes rise { from { opacity: 0; } }
-  @keyframes rise-intro { from { opacity: 0; } }
   @keyframes pop-in { from { opacity: 0; } }
   @keyframes drop { from { opacity: 0; } }
   @keyframes pop { from { transform: translateX(-50%); opacity: 0; } }
-  @keyframes pop-intro { from { transform: translateX(-50%); opacity: 0; } }
   @keyframes sheet { from { opacity: 0; } }
   @keyframes breathe { 50% { opacity: .85; } }
   @keyframes breathe-pill { 0%, 100% { transform: translateX(-50%); } 50% { transform: translateX(-50%); opacity: .85; } }

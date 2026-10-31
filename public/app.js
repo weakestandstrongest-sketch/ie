@@ -1,7 +1,7 @@
 'use strict';
 
 // 公開するたびに sw.js の CACHE と index.html の ?v= と一緒に上げる
-const APP_VERSION = '10';
+const APP_VERSION = '11';
 
 const $ = (id) => document.getElementById(id);
 const HOME_KEY = 'ie:home';
@@ -561,13 +561,18 @@ renderTop();
 renderHomeLabel();
 if (restoreState()) {
   document.body.classList.add('has-result');
-  renderResult(true);
+  // 開いたときのアニメーションがあるときは、それが終わってから出てくる動きを流す（ここでは描くだけ）
+  renderResult(!document.documentElement.classList.contains('splash-on'));
 }
 // 開いたときのアニメーション。終わったら、ふだんの動きに戻す
 let introTimer = 0;
 function endIntroLater() {
   clearTimeout(introTimer);
-  introTimer = setTimeout(() => document.documentElement.classList.remove('intro'), 1600);
+  introTimer = setTimeout(() => {
+    document.documentElement.classList.remove('intro');
+    // 出てくる動きは終わったので外す（残すと、あとで見た目が変わったときにもう一度流れることがある）
+    $('result').classList.remove('enter');
+  }, 1600);
 }
 function playIntro() {
   if (busy || document.querySelector('dialog[open]')) return;
@@ -575,6 +580,10 @@ function playIntro() {
   root.classList.remove('intro');
   void root.offsetWidth; // いったん外してから付け直すと、最初から再生される
   root.classList.add('intro');
+  const go = $('go');
+  go.style.animation = 'none';
+  void go.offsetWidth;
+  go.style.animation = '';
   if (state.data) renderResult(true);
   window.scrollTo(0, 0);
   endIntroLater();
